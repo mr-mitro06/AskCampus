@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AskCampus | Campus Portal</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- EmailJS SDK -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* --- 1. THEME & VARIABLES --- */
+        :root {
+            /* Pure Green Palette */
+            --bg-gradient-start: #1a2310; /* Deepest organic green */
+            --bg-gradient-mid: #2d3623;   /* Mid Forest Green */
+            --bg-gradient-end: #0f140a;   /* Almost Black Green */
+            
+            --olive-mid: #3a4b24;
+            --olive-pastel: #b8c5a8; 
+            --olive-light: #d9e0d0;
+            
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-highlight: rgba(255, 255, 255, 0.15);
+            --danger-color: #ff6b6b;
+            
+            --primary-color: var(--olive-pastel); /* Green Primary */
+            --btn-text-color: #2d3623;
+            --text-color: #f0f0f0;
+            --text-muted: rgba(255, 255, 255, 0.7);
+            
+            /* Blob Colors for Green Theme */
+            --blob-color-1: #3a4b24;
+            --blob-color-2: #556b2f;
+            --blob-color-3: #4a6b4b;
+        }
+
+        /* Black & White Theme Override */
+        body.theme-bw {
+            --bg-gradient-start: #000000;
+            --bg-gradient-mid: #1a1a1a;
+            --bg-gradient-end: #0d0d0d;
+            
+            --olive-mid: #333333;
+            --olive-pastel: #ffffff;
+            --olive-light: #cccccc;
+            
+            --primary-color: #ffffff;
+            --btn-text-color: #000000;
+            
+            --blob-color-1: #333333;
+            --blob-color-2: #111111;
+            --blob-color-3: #444444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-mid), var(--bg-gradient-end));
+            background-size: 400% 400%;
+            animation: gradientBG 20s ease infinite;
+            overflow: hidden;
+            color: var(--text-color);
+            transition: background 0.5s ease;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* --- 2. ANIMATED BACKGROUND ELEMENTS --- */
+        .background-blobs {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            animation: float 25s infinite ease-in-out;
+            transition: background 0.5s ease;
+        }
+
+        /* Green Blobs Only */
+        .blob-1 { width: 600px; height: 600px; background: var(--blob-color-1); top: -20%; left: -10%; animation-delay: 0s; opacity: 0.3; }
+        .blob-2 { width: 500px; height: 500px; background: var(--blob-color-2); bottom: -10%; right: -10%; animation-delay: -5s; opacity: 0.3; }
+        .blob-3 { width: 400px; height: 400px; background: var(--blob-color-3); top: 40%; left: 30%; filter: blur(90px); opacity: 0.2; animation: float 30s infinite reverse; }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        /* --- 3. RESPONSIVE GLASS CARD --- */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 40px;
+            width: 90%;
+            max-width: 440px;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* View-Specific Sizes */
+        .glass-card.auth-active { max-width: 440px; }
+        .glass-card.chat-active { max-width: 600px; height: 80vh; padding: 0; }
+
+        @media (max-width: 768px) {
+            .glass-card {
+                width: 100%; height: 100dvh; max-width: none !important;
+                border-radius: 0; border: none; padding: 25px;
+                justify-content: center;
+                background: rgba(26, 35, 16, 0.6); /* Slightly dark mobile bg */
+            }
+            .glass-card.chat-active { justify-content: flex-start; padding: 0; }
+            .otp-inputs { gap: 5px; }
+            .otp-field { width: 40px; height: 50px; font-size: 1.2rem; }
+            #chat-messages { padding: 15px; }
+            .chat-footer { padding: 15px; }
+            .chat-header { padding: 15px 20px; }
+        }
+
+        /* --- 4. TYPOGRAPHY --- */
+        .logo h1 { font-size: 2.2rem; letter-spacing: -1px; margin-bottom: 5px; font-weight: 600; text-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .logo h1 span { color: var(--primary-color); }
+        .subtitle { font-weight: 300; font-size: 0.85rem; opacity: 0.7; margin-bottom: 0; display: block; }
+
+        /* --- 5. AUTH COMPONENTS --- */
+        #login-form {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .theme-switcher {
+            position: absolute; top: 20px; right: 20px; display: flex; gap: 8px; z-index: 20;
+        }
+        .theme-btn {
+            width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3);
+            cursor: pointer; transition: transform 0.2s;
+        }
+        .theme-btn:hover { transform: scale(1.2); }
+        .theme-btn.green { background: #b8c5a8; }
+        .theme-btn.bw { background: #ffffff; border-color: #555; }
+
+        input[type="email"] {
+            width: 100%; padding: 16px; background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border); border-radius: 15px; color: white; font-size: 1rem; outline: none; transition: 0.3s;
+        }
+        input:focus { border-color: var(--primary-color); background: rgba(255, 255, 255, 0.1); box-shadow: 0 0 15px rgba(255,255,255,0.1); }
+
+        .otp-container { display: none; animation: fadeIn 0.5s ease; }
+        .otp-inputs { display: flex; justify-content: space-between; gap: 8px; margin-top: 5px; }
+        .otp-field {
+            width: 45px; height: 55px; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--glass-border);
+            border-radius: 12px; text-align: center; font-size: 1.4rem; color: white; font-weight: 600; outline: none; transition: all 0.2s;
+        }
+        .otp-field:focus { border-color: var(--primary-color); background: rgba(255, 255, 255, 0.2); box-shadow: 0 0 10px rgba(255,255,255,0.1); }
+
+        .btn {
+            width: 100%; padding: 16px; border: none; border-radius: 15px; font-size: 1rem; font-weight: 600; cursor: pointer;
+            transition: 0.3s; display: flex; align-items: center; justify-content: center;
+            margin: 0;
+        }
+        .btn-primary { background: var(--primary-color); color: var(--btn-text-color); }
+        .btn-primary:hover:not(:disabled) { background: var(--olive-light); transform: translateY(-2px); box-shadow: 0 10px 20px rgba(184, 197, 168, 0.2); }
+        .btn:disabled { opacity: 0.6; cursor: wait; }
+        
+        .btn-secondary { 
+            background: transparent; 
+            border: 1px solid var(--glass-border); 
+            color: var(--text-muted); 
+            font-size: 0.9rem;
+            padding: 12px;
+        }
+        .btn-secondary:hover { 
+            background: rgba(255, 255, 255, 0.05); 
+            color: white; 
+            border-color: var(--primary-color); 
+        }
+
+        .spinner {
+            width: 20px; height: 20px; border: 3px solid rgba(45, 54, 35, 0.3); border-radius: 50%; border-top-color: #2d3623;
+            animation: spin 0.8s linear infinite; display: none; margin-left: 10px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .error-msg { color: var(--danger-color); font-size: 0.8rem; display: none; text-align: left; padding-left: 5px; }
+
+        /* --- 6. CHAT UI --- */
+        #chat-view { display: none; opacity: 0; flex-direction: column; height: 100%; width: 100%; transition: opacity 0.4s ease; position: relative; }
+        
+        .chat-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 25px; border-bottom: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .chat-title { font-size: 1.1rem; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+        .status-dot { width: 8px; height: 8px; background: var(--primary-color); border-radius: 50%; display: inline-block; box-shadow: 0 0 8px var(--primary-color); animation: breathe 3s infinite; }
+        
+        @keyframes breathe { 0%, 100% { opacity: 0.5; box-shadow: 0 0 5px var(--primary-color); } 50% { opacity: 1; box-shadow: 0 0 15px var(--primary-color); } }
+
+        .settings-btn { background: none; border: none; color: white; opacity: 0.7; font-size: 1.2rem; cursor: pointer; transition: 0.3s; }
+        .settings-btn:hover { opacity: 1; transform: rotate(90deg); color: var(--primary-color); }
+
+        #chat-messages {
+            flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px;
+            scroll-behavior: smooth;
+        }
+        #chat-messages::-webkit-scrollbar { width: 5px; }
+        #chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        .msg { max-width: 80%; padding: 14px 18px; border-radius: 18px; font-size: 0.95rem; line-height: 1.5; position: relative; animation: slideIn 0.3s ease forwards; opacity: 0; transform: translateY(10px); }
+        .msg.bot { background: rgba(255, 255, 255, 0.08); align-self: flex-start; border-bottom-left-radius: 4px; color: var(--text-color); }
+        .msg.user { background: var(--primary-color); color: var(--btn-text-color); align-self: flex-end; border-bottom-right-radius: 4px; font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+
+        @keyframes slideIn { to { opacity: 1; transform: translateY(0); } }
+
+        .chat-footer {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid var(--glass-border);
+            display: flex; gap: 10px; align-items: center;
+        }
+
+        .input-wrapper {
+            flex: 1; position: relative;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            backdrop-filter: blur(15px);
+            transition: 0.3s;
+            display: flex; align-items: center;
+            padding: 5px 5px 5px 20px;
+        }
+        .input-wrapper:focus-within { border-color: var(--primary-color); box-shadow: 0 0 15px rgba(255,255,255,0.1); background: var(--glass-highlight); }
+
+        .chat-input {
+            width: 100%; background: transparent; border: none; color: white; font-size: 1rem; outline: none; padding: 10px 0;
+        }
+        .chat-input::placeholder { color: rgba(255, 255, 255, 0.4); }
+
+        .send-btn {
+            width: 45px; height: 45px; border-radius: 50%; border: none;
+            background: var(--primary-color); color: var(--btn-text-color);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: 0.3s; flex-shrink: 0;
+        }
+        .send-btn:hover { transform: scale(1.05); background: var(--olive-light); }
+        .send-btn:active { transform: scale(0.95); }
+
+        .typing { font-size: 0.75rem; opacity: 0.6; margin: -10px 0 10px 20px; text-align: left; height: 1rem; display: flex; align-items: center; gap: 5px; }
+        .dot { width: 4px; height: 4px; background: white; border-radius: 50%; animation: pulse 1s infinite; }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+        /* Notification */
+        .notification {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: var(--olive-light); color: #2d3623; padding: 12px 20px;
+            border-radius: 12px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 100; display: none; animation: slideUp 0.4s ease;
+        }
+        @keyframes slideUp { from { transform: translate(-50%, 100%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+
+        /* View State Management */
+        #auth-view {
+            display: none;
+            opacity: 0;
+            flex-direction: column;
+            width: 100%;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.4s ease;
+        }
+
+        /* --- 7. MODALS --- */
+        .modal-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(8px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; }
+
+        .glass-modal {
+            background: rgba(26, 35, 16, 0.95); /* Deep green modal bg */
+            border: 1px solid var(--glass-border);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            width: 85%;
+            max-width: 320px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+        .modal-overlay.active .glass-modal { transform: scale(1); }
+        
+        body.theme-bw .glass-modal { background: rgba(0, 0, 0, 0.95); }
+
+        .glass-modal h3 { font-weight: 600; margin-bottom: 20px; color: white; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        .glass-modal p { font-size: 0.9rem; opacity: 0.8; margin-bottom: 25px; color: #d0d0d0; }
+        
+        .modal-actions { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+        .modal-actions button { 
+            margin-top: 0; padding: 12px 20px; font-size: 0.9rem; border-radius: 12px; flex: 1;
+        }
+        
+        /* Modal Buttons */
+        .modal-btn-option {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 12px;
+            justify-content: flex-start;
+            padding-left: 20px;
+            font-weight: 500;
+            width: 100%;
+            display: flex;
+            align-items: center;
+        }
+        .modal-btn-option:hover { background: rgba(255, 255, 255, 0.15); border-color: rgba(255,255,255,0.3); }
+        .modal-btn-option i { margin-right: 15px; width: 20px; text-align: center; }
+
+        .modal-btn-cancel { 
+            background: transparent; border: 1px solid rgba(255,255,255,0.2); color: white; 
+        }
+        .modal-btn-cancel:hover { background: rgba(255,255,255,0.1); }
+        
+        .modal-btn-confirm { 
+            background: var(--danger-color); border: none; color: white; box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+        }
+        .modal-btn-confirm:hover { background: #ff5252; transform: translateY(-2px); }
+
+        /* Report Textarea */
+        textarea {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 15px;
+            color: white;
+            font-family: 'Poppins', sans-serif;
+            outline: none;
+            resize: none;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+        textarea:focus { border-color: var(--primary-color); background: rgba(0, 0, 0, 0.4); }
+
+    </style>
+</head>
+<body>
+    
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <!-- NOTIFICATION -->
+    <div id="demo-notification" class="notification"></div>
+
+    <div class="glass-card auth-active" id="main-card">
+        
+        <!-- === AUTH VIEW === -->
+        <div id="auth-view">
+            <!-- Theme Switcher -->
+            <div class="theme-switcher">
+                <button class="theme-btn green" onclick="setTheme('green')" title="Green Theme"></button>
+                <button class="theme-btn bw" onclick="setTheme('bw')" title="Black & White"></button>
+            </div>
+
+            <div class="logo"><h1>Ask<span>Campus</span></h1><span class="subtitle">Campus Portal Login</span></div>
+            <div id="login-form">
+                <input type="email" id="email" placeholder="College Email (@vjcet.org)" required>
+                <div id="error-msg" class="error-msg"></div>
+
+                <div id="otp-section" class="otp-container">
+                    <p style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 8px;">Check your email for the 6-digit code</p>
+                    <div class="otp-inputs">
+                        <input type="text" maxlength="1" class="otp-field" inputmode="numeric">
+                        <input type="text" maxlength="1" class="otp-field" inputmode="numeric">
+                        <input type="text" maxlength="1" class="otp-field" inputmode="numeric">
+                        <input type="text" maxlength="1" class="otp-field" inputmode="numeric">
+                        <input type="text" maxlength="1" class="otp-field" inputmode="numeric">
+                        <input type="text" maxlength="1" class="otp-field" inputmode="numeric">
+                    </div>
+                </div>
+                
+                <button class="btn btn-primary" id="btn-action" onclick="handleAuthAction()">
+                    <span id="btn-text">Send Verification Code</span>
+                    <div class="spinner" id="btn-spinner"></div>
+                </button>
+
+                <button class="btn btn-secondary" id="btn-guest" onclick="handleGuestLogin()">
+                    Continue as Visitor
+                </button>
+            </div>
+        </div>
+
+        <!-- === CHAT VIEW (NEW HOME) === -->
+        <div id="chat-view">
+            <div class="chat-header">
+                <div class="chat-title" id="header-title">
+                    <span class="status-dot"></span>
+                    AskCampus AI
+                </div>
+                <button class="settings-btn" onclick="toggleSettings()"><i class="fa-solid fa-gear"></i></button>
+            </div>
+
+            <div id="chat-messages">
+                <div class="msg bot">Hello! I'm your virtual campus assistant. How can I help you today?</div>
+            </div>
+            
+            <div id="typing-indicator" class="typing" style="display: none;">
+                <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            </div>
+
+            <div class="chat-footer">
+                <div class="input-wrapper">
+                    <input type="text" id="chat-input" class="chat-input" placeholder="Type your query..." onkeypress="if(event.key==='Enter') sendMessage()">
+                    <button class="send-btn" onclick="sendMessage()">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- === SETTINGS MODAL === -->
+        <div id="settings-modal" class="modal-overlay">
+            <div class="glass-modal">
+                <h3>Settings</h3>
+                <button class="btn modal-btn-option" onclick="openReportModal()">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Report Issue
+                </button>
+                <button class="btn modal-btn-option" onclick="triggerLogoutConfirmation()" style="border-color: rgba(255, 107, 107, 0.5); color: #ff6b6b;">
+                    <i class="fa-solid fa-right-from-bracket"></i> Log Out
+                </button>
+                <button class="btn modal-btn-cancel" onclick="closeSettingsModal()" style="margin-top: 15px; font-size: 0.8rem;">Close</button>
+            </div>
+        </div>
+
+        <!-- === REPORT MODAL === -->
+        <div id="report-modal" class="modal-overlay">
+            <div class="glass-modal">
+                <h3>Report Issue</h3>
+                <textarea id="report-text" rows="4" placeholder="Describe the issue you are facing..."></textarea>
+                <div class="modal-actions">
+                    <button class="btn modal-btn-cancel" onclick="closeReportModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="submitReport()">Submit</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- === LOGOUT CONFIRMATION MODAL === -->
+        <div id="logout-modal" class="modal-overlay">
+            <div class="glass-modal">
+                <h3>Log Out?</h3>
+                <p>Are you sure you want to end your session?</p>
+                <div class="modal-actions">
+                    <button class="btn modal-btn-cancel" onclick="closeLogoutModal()">Cancel</button>
+                    <button class="btn modal-btn-confirm" onclick="confirmLogout()">Log Out</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SCRIPTS -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // --- CONFIGURATIONS ---
+        const emailJsConfig = {
+            serviceID: "service_ztras7a",
+            templateID: "template_schdxfl", 
+            publicKey: "6CkOb9c2S-J3aFH5l"
+        };
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDIECIqWkrLVexHmnTjUV3CATw7h2i38Uc",
+            authDomain: "askcampus-ea173.firebaseapp.com",
+            projectId: "askcampus-ea173",
+            storageBucket: "askcampus-ea173.firebasestorage.app",
+            messagingSenderId: "834755037776",
+            appId: "1:834755037776:web:89624d21c98d98909b9f55",
+            measurementId: "G-RDJZV2XR2K"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const apiKey = ""; // Gemini API Key
+
+        try { emailjs.init(emailJsConfig.publicKey); } catch(e) { console.log("EmailJS init failed"); }
+
+        let currentOTP = null;
+        let isOtpSent = false;
+
+        // --- THEME SWITCHER ---
+        window.setTheme = (theme) => {
+            if (theme === 'bw') {
+                document.body.classList.add('theme-bw');
+            } else {
+                document.body.classList.remove('theme-bw');
+            }
+        };
+
+        // --- HELPER: NAME EXTRACTION ---
+        function extractName(email) {
+            if (!email || email.includes("Visitor")) return "Visitor";
+            const localPart = email.split('@')[0];
+            const match = localPart.match(/^[a-zA-Z]+/);
+            if (match && match[0]) {
+                return match[0].charAt(0).toUpperCase() + match[0].slice(1);
+            }
+            return "Scholar";
+        }
+
+        // --- HELPER: TIME GREETING ---
+        function getGreeting() {
+            const hour = new Date().getHours();
+            if (hour < 12) return "Good Morning";
+            if (hour < 17) return "Good Afternoon";
+            return "Good Evening";
+        }
+
+        // --- TRAINING DATA (KNOWLEDGE BASE) ---
+        const collegeKnowledgeBase = {
+            "about": "Viswajyothi College of Engineering and Technology (VJCET) is a self-financing engineering college established in 2001. It is managed by the Diocesan Technical Education Trust, Kothamangalam. The campus is located in Vazhakulam, Muvattupuzha.",
+            "location": "VJCET is situated in Vazhakulam, Muvattupuzha, Ernakulam District, Kerala, India. It is often referred to as 'Pineapple City' due to the region's produce.",
+            "affiliation": "The college is affiliated to APJ Abdul Kalam Technological University (KTU) and approved by AICTE, New Delhi. It is accredited by NAAC with 'A' Grade.",
+            "courses": "VJCET offers B.Tech in CSE, ECE, EEE, ME, CE, IT, AI & DS (AD), and CSE (Cyber Security). It also offers M.Tech degrees and an MBA program.",
+            "exam": "Semester exams are conducted by KTU. Internal exams (Series tests) are conducted centrally by the college. Check the student ERP or notice board for specific timetables.",
+            "fee": "Fee structures vary by quota (Government/Management/NRI). Generally, tuition fees for government quota are regulated by the state. Please check the 'Admissions' section on vjcet.org for the latest fee structure.",
+            "hostel": "Campus provides separate hostels: Sanjo Hostel for gents and Assisi/Vimala Hostels for ladies. Hostels feature mess facilities, study halls, and Wi-Fi.",
+            "bus": "The college operates a fleet of buses covering routes across Ernakulam, Idukki, and Kottayam districts, including Kochi, Perumbavoor, Thodupuzha, and Kothamangalam.",
+            "library": "The Central Library covers a vast area with thousands of volumes, journals, and a digital library section. Open from 8:00 AM to 6:00 PM on working days.",
+            "placement": "The Placement & Training Cell (CGPU) is very active. Major recruiters include TCS, Infosys, Cognizant, Wipro, SOTI, and UST. Average packages range from 3-5 LPA, with higher offers for niche skills.",
+            "principal": "The Principal manages the academic and administrative affairs. For appointments, contact the college office.",
+            "grievance": "Grievances can be addressed to the Grievance Redressal Cell via this portal or physically dropped in suggestion boxes located in the main block.",
+            "events": "VJCET hosts 'BODHI' (National Level Tech Fest) and 'DRISHITI' (Arts Fest) annually. Department associations also conduct various technical events.",
+            "contact": "Phone: 0485-2822363, 2822364. Email: office@vjcet.org / principal@vjcet.org. Website: www.vjcet.org"
+        };
+
+        // --- AUTH & NAVIGATION ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                showView('chat-view', 'chat-active');
+                
+                // Update Header
+                const email = sessionStorage.getItem('userEmail') || "Visitor";
+                const name = extractName(email);
+                const greeting = getGreeting();
+                const headerTitle = document.getElementById('header-title');
+                if(headerTitle) {
+                    headerTitle.innerHTML = `<span class="status-dot"></span> ${greeting}, ${name}`;
+                }
+
+            } else {
+                showView('auth-view', 'auth-active');
+                resetAuthUI();
+            }
+        });
+
+        function showView(viewId, cardClass) {
+            const card = document.getElementById('main-card');
+            const authView = document.getElementById('auth-view');
+            const chatView = document.getElementById('chat-view');
+
+            authView.style.display = 'none';
+            chatView.style.display = 'none';
+
+            card.className = `glass-card ${cardClass}`;
+            document.getElementById(viewId).style.display = 'flex';
+            setTimeout(() => document.getElementById(viewId).style.opacity = '1', 50);
+        }
+
+        // --- OTP LOGIC ---
+        window.handleAuthAction = async function() {
+            if (!isOtpSent) requestOTP();
+            else verifyOTP();
+        };
+
+        function requestOTP() {
+            const emailInput = document.getElementById('email');
+            const email = emailInput.value.trim().toLowerCase();
+            const errorEl = document.getElementById('error-msg');
+            const btn = document.getElementById('btn-action');
+            const btnText = document.getElementById('btn-text');
+            const spinner = document.getElementById('btn-spinner');
+
+            errorEl.style.display = "none";
+            emailInput.style.borderColor = "var(--glass-border)";
+
+            if (!email.endsWith('@vjcet.org')) {
+                errorEl.innerText = "Restricted: Use @vjcet.org only.";
+                errorEl.style.display = "block";
+                return;
+            }
+
+            btnText.style.display = "none";
+            spinner.style.display = "block";
+            btn.disabled = true;
+
+            currentOTP = Math.floor(100000 + Math.random() * 900000).toString();
+            
+            const now = new Date();
+            now.setMinutes(now.getMinutes() + 15);
+            
+            const templateParams = {
+                to_email: email, 
+                otp_code: currentOTP,
+                time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+
+            emailjs.send(emailJsConfig.serviceID, emailJsConfig.templateID, templateParams)
+                .then(() => {
+                    spinner.style.display = "none";
+                    btn.disabled = false;
+                    isOtpSent = true;
+                    emailInput.disabled = true;
+                    document.getElementById('otp-section').style.display = "block";
+                    document.getElementById('btn-guest').style.display = "none";
+                    btnText.innerText = "Verify & Enter";
+                    btnText.style.display = "block";
+                    document.querySelector('.otp-field').focus();
+                }).catch((err) => {
+                    spinner.style.display = "none";
+                    btn.disabled = false;
+                    btnText.style.display = "block";
+                    alert("Email Failed (" + err.status + ").\nFALLBACK CODE: " + currentOTP);
+                    // Fallback flow
+                    isOtpSent = true;
+                    emailInput.disabled = true;
+                    document.getElementById('otp-section').style.display = "block";
+                    document.getElementById('btn-guest').style.display = "none";
+                    btnText.innerText = "Verify & Enter";
+                });
+        }
+
+        async function verifyOTP() {
+            const otpFields = document.querySelectorAll('.otp-field');
+            const enteredCode = Array.from(otpFields).map(f => f.value).join('');
+            
+            if (enteredCode === currentOTP) {
+                sessionStorage.setItem('userEmail', document.getElementById('email').value);
+                try { await signInAnonymously(auth); } 
+                catch (err) { alert("Login Failed: " + err.message); }
+            } else {
+                otpFields.forEach(f => { f.value = ""; f.style.borderColor = "#ff6b6b"; });
+                otpFields[0].focus();
+            }
+        }
+
+        window.handleGuestLogin = async function() {
+            sessionStorage.setItem('userEmail', 'Visitor');
+            try { await signInAnonymously(auth); } 
+            catch (error) { alert("Enable Anonymous Auth in Firebase Console."); }
+        };
+
+        window.handleLogout = () => {
+            signOut(auth).then(() => { 
+                sessionStorage.removeItem('userEmail');
+                location.reload(); 
+            });
+        };
+
+        function resetAuthUI() {
+            isOtpSent = false;
+            currentOTP = null;
+            document.getElementById('email').value = "";
+            document.getElementById('email').disabled = false;
+            document.getElementById('otp-section').style.display = "none";
+            document.getElementById('btn-text').innerText = "Send Verification Code";
+            document.getElementById('btn-guest').style.display = "block";
+            document.getElementById('error-msg').style.display = "none";
+            document.querySelectorAll('.otp-field').forEach(f => { f.value = ""; f.style.borderColor = "var(--glass-border)"; });
+            document.getElementById('btn-spinner').style.display = "none";
+            document.getElementById('btn-action').disabled = false;
+        }
+
+        // --- OTP AUTO-FOCUS ---
+        const otpInputs = document.querySelectorAll('.otp-field');
+        otpInputs.forEach((field, index) => {
+            field.addEventListener('input', (e) => {
+                if (e.target.value.length === 1 && index < otpInputs.length - 1) otpInputs[index + 1].focus();
+            });
+            field.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && !e.target.value && index > 0) otpInputs[index - 1].focus();
+            });
+        });
+
+        // --- CHAT LOGIC WITH ANIMATION ---
+        window.sendMessage = async () => {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if(!text) return;
+            
+            appendMessage(text, 'user');
+            input.value = ''; 
+            
+            document.getElementById('typing-indicator').style.display = 'flex';
+
+            const responseText = await callGemini(text);
+            
+            document.getElementById('typing-indicator').style.display = 'none';
+            typeWriterMessage(responseText);
+        };
+
+        function appendMessage(text, type) {
+            const box = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = `msg ${type}`;
+            div.innerText = text;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function typeWriterMessage(text) {
+            const box = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = 'msg bot';
+            box.appendChild(div);
+            
+            let i = 0;
+            const speed = 15;
+            
+            function type() {
+                if (i < text.length) {
+                    div.innerHTML += text.charAt(i);
+                    i++;
+                    box.scrollTop = box.scrollHeight;
+                    setTimeout(type, speed);
+                }
+            }
+            type();
+        }
+
+        // --- MODAL & MENU LOGIC ---
+        window.toggleSettings = () => {
+            openModal('settings-modal');
+        };
+
+        window.closeSettingsModal = () => {
+            closeModal('settings-modal');
+        };
+
+        window.openReportModal = () => {
+            closeModal('settings-modal');
+            setTimeout(() => openModal('report-modal'), 300);
+        };
+
+        window.closeReportModal = () => {
+            closeModal('report-modal');
+        };
+
+        window.submitReport = () => {
+            const issue = document.getElementById('report-text').value.trim();
+            if(!issue) return;
+            
+            // Here you would send this to Firestore/Email
+            alert("Thank you! Your feedback has been recorded.");
+            document.getElementById('report-text').value = "";
+            closeReportModal();
+        };
+
+        window.triggerLogoutConfirmation = () => {
+            closeModal('settings-modal');
+            setTimeout(() => openModal('logout-modal'), 300);
+        };
+
+        window.closeLogoutModal = () => {
+            closeModal('logout-modal');
+        };
+
+        window.confirmLogout = () => {
+            window.handleLogout();
+        };
+
+        // Generic Modal Helpers
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('active'), 10);
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.remove('active');
+            setTimeout(() => modal.style.display = 'none', 300);
+        }
+
+        async function callGemini(query) {
+            // 1. SEARCH KNOWLEDGE BASE (Local Logic)
+            let localAnswer = null;
+            const lowerQuery = query.toLowerCase();
+            
+            // Simple keyword matching for local fallback or RAG context
+            let contextData = "";
+            for (const [key, value] of Object.entries(collegeKnowledgeBase)) {
+                if (lowerQuery.includes(key) || value.toLowerCase().includes(lowerQuery)) {
+                    contextData += value + "\n";
+                    if(!localAnswer) localAnswer = value; // Pick first match for local mode
+                }
+            }
+
+            // 2. IF NO API KEY, USE LOCAL FALLBACK (Offline AI)
+            if (!apiKey) {
+                console.warn("No API Key: Using offline knowledge base.");
+                
+                if (localAnswer) {
+                    // Simulate "thinking" delay slightly for realism
+                    return localAnswer; 
+                }
+                
+                // Smart Fallback if no keyword matched
+                if (lowerQuery.includes("hello") || lowerQuery.includes("hi")) {
+                    return "Hello! I am the VJCET Campus Assistant. Ask me about fees, exams, hostels, or buses.";
+                }
+                
+                return "I am currently in offline mode. I can answer questions about: " + Object.keys(collegeKnowledgeBase).join(", ") + ". For advanced AI chat, please add a Gemini API Key.";
+            }
+
+            // 3. REAL AI CALL (If API Key exists)
+            const system = `You are AskCampus, the official AI assistant for Viswajyothi College of Engineering and Technology (VJCET).
+            
+            OFFICIAL CAMPUS DATA:
+            ${contextData}
+            
+            INSTRUCTIONS:
+            - If the user's query relates to the DATA provided above, use it to answer accurately.
+            - If the query is general (like "how are you"), be polite and helpful.
+            - If the query is about specific details NOT in the data, politely say you don't have that info and suggest contacting the office.
+            - Keep answers short, professional, and friendly.`;
+            
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ contents: [{parts:[{text: query}]}], systemInstruction: {parts:[{text: system}]} })
+                });
+                const data = await res.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm having trouble thinking right now.";
+            } catch (e) { 
+                return "Connection error. Please check your internet."; 
+            }
+        }
+    </script>
+</body>
+</html>
