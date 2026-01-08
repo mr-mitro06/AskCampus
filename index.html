@@ -15,9 +15,9 @@
         /* --- 1. THEME & VARIABLES --- */
         :root {
             /* Pure Green Palette */
-            --bg-gradient-start: #1a2310; /* Deepest organic green */
-            --bg-gradient-mid: #2d3623;   /* Mid Forest Green */
-            --bg-gradient-end: #0f140a;   /* Almost Black Green */
+            --bg-gradient-start: #1a2310;
+            --bg-gradient-mid: #2d3623;
+            --bg-gradient-end: #0f140a;
             
             --olive-mid: #3a4b24;
             --olive-pastel: #b8c5a8; 
@@ -28,7 +28,7 @@
             --glass-highlight: rgba(255, 255, 255, 0.15);
             --danger-color: #ff6b6b;
             
-            --primary-color: var(--olive-pastel); /* Green Primary */
+            --primary-color: var(--olive-pastel);
             --btn-text-color: #2d3623;
             --text-color: #f0f0f0;
             --text-muted: rgba(255, 255, 255, 0.7);
@@ -104,7 +104,6 @@
             transition: background 0.5s ease;
         }
 
-        /* Green Blobs Only */
         .blob-1 { width: 600px; height: 600px; background: var(--blob-color-1); top: -20%; left: -10%; animation-delay: 0s; opacity: 0.3; }
         .blob-2 { width: 500px; height: 500px; background: var(--blob-color-2); bottom: -10%; right: -10%; animation-delay: -5s; opacity: 0.3; }
         .blob-3 { width: 400px; height: 400px; background: var(--blob-color-3); top: 40%; left: 30%; filter: blur(90px); opacity: 0.2; animation: float 30s infinite reverse; }
@@ -135,8 +134,9 @@
             flex-direction: column;
             overflow: hidden;
         }
-
-        /* View-Specific Sizes */
+        
+        /* View specific states */
+        .glass-card.disclaimer-active { max-width: 400px; }
         .glass-card.auth-active { max-width: 440px; }
         .glass-card.chat-active { max-width: 600px; height: 80vh; padding: 0; }
 
@@ -145,7 +145,7 @@
                 width: 100%; height: 100dvh; max-width: none !important;
                 border-radius: 0; border: none; padding: 25px;
                 justify-content: center;
-                background: rgba(26, 35, 16, 0.6); /* Slightly dark mobile bg */
+                background: rgba(26, 35, 16, 0.6);
             }
             .glass-card.chat-active { justify-content: flex-start; padding: 0; }
             .otp-inputs { gap: 5px; }
@@ -313,6 +313,15 @@
             align-items: center;
             transition: opacity 0.4s ease;
         }
+        
+        #disclaimer-view {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.4s ease;
+        }
 
         /* --- 7. MODALS --- */
         .modal-overlay {
@@ -330,7 +339,7 @@
         .modal-overlay.active { opacity: 1; }
 
         .glass-modal {
-            background: rgba(26, 35, 16, 0.95); /* Deep green modal bg */
+            background: rgba(26, 35, 16, 0.95);
             border: 1px solid var(--glass-border);
             padding: 30px;
             border-radius: 20px;
@@ -408,8 +417,21 @@
     <!-- NOTIFICATION -->
     <div id="demo-notification" class="notification"></div>
 
-    <div class="glass-card auth-active" id="main-card">
+    <div class="glass-card disclaimer-active" id="main-card">
         
+        <!-- === DISCLAIMER VIEW === -->
+        <div id="disclaimer-view">
+            <div class="logo"><h1>WARNING</h1></div>
+            <div style="margin: 20px 0; color: var(--danger-color); font-size: 1.1rem; font-weight: 600;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 3rem; margin-bottom: 15px;"></i><br>
+                THE AI IS NOT TRAINED WELL AND IT MAY SHOW FALSE RESULT
+            </div>
+            <p style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 30px; line-height: 1.5;">
+                Please verify important academic and administrative information directly with the college office.
+            </p>
+            <button class="btn btn-primary" onclick="acceptDisclaimer()">OKAY</button>
+        </div>
+
         <!-- === AUTH VIEW === -->
         <div id="auth-view">
             <!-- Theme Switcher -->
@@ -457,7 +479,7 @@
             </div>
 
             <div id="chat-messages">
-                <div class="msg bot">Hello! I'm your virtual campus assistant. How can I help you today?</div>
+                <div class="msg bot">Hello! I'm your virtual Vjcet campus assistant. How can I help you today?</div>
             </div>
             
             <div id="typing-indicator" class="typing" style="display: none;">
@@ -538,12 +560,14 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const apiKey = "AIzaSyCMxeWj6jsXAAqnJOXXMGV7HT-v7dw28Us"; // Gemini API Key
+        const apiKey = "AIzaSyCl8a7_zsSeDrT1eoaZgVo5flacJw7sxVo"; // Gemini API Key
 
         try { emailjs.init(emailJsConfig.publicKey); } catch(e) { console.log("EmailJS init failed"); }
 
         let currentOTP = null;
         let isOtpSent = false;
+        let isDisclaimerAccepted = false;
+        let currentUser = null;
 
         // --- THEME SWITCHER ---
         window.setTheme = (theme) => {
@@ -573,30 +597,412 @@
             return "Good Evening";
         }
 
-        // --- KNOWLEDGE BASE (Updated & Injected) ---
+        // --- PRIVATE STUDENT DATA ---
+        const specificStudentData = {
+            "attendance_with_duty_leave": [
+                { "subject": "Operating Systems", "attended": 17, "total": 20, "percentage": 85 },
+                { "subject": "Computer Organization and Architecture", "attended": 15, "total": 17, "percentage": 88 },
+                { "subject": "Engineering Ethics and Sustainable Development", "attended": 4, "total": 4, "percentage": 100 },
+                { "subject": "DBMS Lab", "attended": 12, "total": 12, "percentage": 100 },
+                { "subject": "Operating Systems Lab", "attended": 9, "total": 9, "percentage": 100 },
+                { "subject": "Aptitude Training – Phase 2", "attended": 3, "total": 4, "percentage": 75 },
+                { "subject": "Mentoring", "attended": 2, "total": 2, "percentage": 100 },
+                { "subject": "Software Engineering", "attended": 12, "total": 13, "percentage": 92 },
+                { "subject": "Mathematics for Computer and Information Science – 4", "attended": 12, "total": 14, "percentage": 86 },
+                { "subject": "Database Management Systems", "attended": 14, "total": 14, "percentage": 100 }
+            ],
+            "attendance_without_duty_leave": [
+                { "subject": "Operating Systems", "attended": 15, "total": 20, "percentage": 75 },
+                { "subject": "Computer Organization and Architecture", "attended": 13, "total": 17, "percentage": 76 },
+                { "subject": "Engineering Ethics and Sustainable Development", "attended": 3, "total": 4, "percentage": 75 },
+                { "subject": "DBMS Lab", "attended": 12, "total": 12, "percentage": 100 },
+                { "subject": "Operating Systems Lab", "attended": 3, "total": 9, "percentage": 33 },
+                { "subject": "Aptitude Training – Phase 2", "attended": 3, "total": 4, "percentage": 75 },
+                { "subject": "Mentoring", "attended": 2, "total": 2, "percentage": 100 },
+                { "subject": "Software Engineering", "attended": 10, "total": 13, "percentage": 77 },
+                { "subject": "Mathematics for Computer and Information Science – 4", "attended": 8, "total": 14, "percentage": 57 }
+            ],
+            "semester_results_2024_12_01-": {
+                "credits_earned": 10,
+                "total_credits": 20,
+                "sgpa": 3.05,
+                "cgpa_upto_semester": 4.98,
+                "status": "FAILED",
+                "subjects": [
+                    { "code": "GAMAT101", "name": "Mathematics for Information Science – 1", "attendance": 96, "credits": 0, "grade": "F" },
+                    { "code": "GAPHT121", "name": "Physics for Information Science", "attendance": 97, "credits": 4, "grade": "O" },
+                    { "code": "GMEST103", "name": "Engineering Graphics and Computer Aided Drawing", "attendance": 88, "credits": 0, "grade": "F" },
+                    { "code": "GXEST104", "name": "Introduction to Electrical & Electronics Engineering", "attendance": 97, "credits": 0, "grade": "F" },
+                    { "code": "UCEST105", "name": "Algorithmic Thinking with Python", "attendance": 100, "credits": 4, "grade": "C" },
+                    { "code": "GXESL106", "name": "Basic Electrical and Electronics Engineering Workshop", "attendance": 100, "credits": 1, "grade": "B+" },
+                    { "code": "UCHUT128", "name": "Life Skills and Professional Communication", "attendance": 100, "credits": 1, "grade": "PASS" }
+                ]
+            }
+        };
+
+        // --- KNOWLEDGE BASE (FIXED: Added missing commas) ---
         const collegeKnowledgeBase = {
             "about": "Viswajyothi College of Engineering and Technology (VJCET) is a self-financing engineering college established in 2001, managed by the Diocesan Technical Education Trust, Kothamangalam. The campus is located in Vazhakulam, Muvattupuzha.",
-            "location": "VJCET is situated in Vazhakulam, Muvattupuzha, Ernakulam District, Kerala, India. It is often referred to as 'Pineapple City' due to the region's produce.",
+
+            "location": "VJCET is situated in Vazhakulam, Muvattupuzha, Ernakulam District, Kerala, India. The region is popularly known as 'Pineapple City'.",
+
             "affiliation": "The college is affiliated to APJ Abdul Kalam Technological University (KTU) and approved by AICTE, New Delhi. It is accredited by NAAC with 'A' Grade.",
-            "courses": "VJCET offers B.Tech in CSE, ECE, EEE, ME, CE, IT, AI & DS (AD), and CSE (Cyber Security). It also offers M.Tech degrees and an MBA program.",
-            "exam": "Semester exams are conducted by KTU. Internal exams (Series tests) are conducted centrally by the college. Check the student ERP or notice board for specific timetables.",
-            "fee": "Fee structures vary by quota (Government/Management/NRI). Generally, tuition fees for government quota are regulated by the state. Please check the 'Admissions' section on vjcet.org for the latest fee structure.",
-            "hostel": "Campus provides separate hostels: Sanjo Hostel for gents and Assisi/Vimala Hostels for ladies. Hostels feature mess facilities, study halls, and Wi-Fi.",
-            "bus": "The college operates a fleet of buses covering routes across Ernakulam, Idukki, and Kottayam districts, including Kochi, Perumbavoor, Thodupuzha, and Kothamangalam.",
-            "library": "The Central Library covers a vast area with thousands of volumes, journals, and a digital library section. Open from 8:00 AM to 6:00 PM on working days.",
-            "placement": "The Placement & Training Cell (CGPU) is very active. Major recruiters include TCS, Infosys, Cognizant, Wipro, SOTI, and UST. Average packages range from 3-5 LPA, with higher offers for niche skills.",
-            "principal": "The Principal manages the academic and administrative affairs. For appointments, contact the college office.",
-            "grievance": "Grievances can be addressed to the Grievance Redressal Cell via this portal or physically dropped in suggestion boxes located in the main block.",
-            "events": "VJCET hosts 'BODHI' (National Level Tech Fest) and 'DRISHITI' (Arts Fest) annually. Department associations also conduct various technical events.",
+
+            "courses": "VJCET offers B.Tech programs in CSE, ECE, EEE, ME, CE, IT, AI & DS, and CSE (Cyber Security). It also offers M.Tech programs and an MBA.",
+
+            "working_hours": "College working hours are from 8:55 AM to 4:15 PM on working days.",
+
+            "attendance": "A minimum of 75% attendance is required to be eligible for semester examinations.",
+
+            "attendance_shortage": "Students with attendance below 75% are not allowed to write exams. However, condonation may be permitted as per university norms.",
+
+            "exam": "Semester examinations are conducted by KTU. Internal (series) examinations are conducted by the college.",
+
+            "leave_policy": "Medical leave and duty leave are permitted with valid proof as per college rules.",
+
+            "first_year": "First-year classes are conducted in separate department blocks. First-year students follow the same rules as other students.",
+
+            "first_year_privileges": "First-year students are allowed to join clubs, participate in arts and technical fests, use college buses, and access the canteen.",
+
+            "erp": "Students use the ETLAB software for attendance, internal marks, and academic updates.",
+
+            "mentoring": "Each class is assigned tutors and assistant tutors for academic guidance and student support.",
+
+            "counselling": "The college provides counselling and mental health support services for students.",
+
+            "scholarship": "Scholarship support is available. Students should contact the college office for details on applicable schemes.",
+
+            "placement_start": "Placement training and support start from the first year itself.",
+
+            "placement_support": "The college offers placement services including aptitude training, coding sessions, and soft-skill development.",
+
+            "internship": "The college provides assistance for internships.",
+
+            "hostel": "Separate hostels are available for boys and girls. Hostel life is generally moderate in terms of rules and discipline.",
+
+            "hostel_outing": "Outing permission is required for hostel students.",
+
+            "hostel_visitors": "Day scholars are not allowed to visit hostels.",
+
+            "dress_code": "A formal dress code is compulsory for both boys and girls.",
+
+            "mobile_policy": "Mobile phones must be kept silent or switched off inside classrooms.",
+
+            "late_entry": "Late entry into college is not permitted.",
+
+            "biometric": "Biometric attendance is not used.",
+
+            "clubs_technical": "Technical and innovation clubs include GDG, IEEE, ThinkerHub, IEDC, and μLearn.",
+
+            "clubs_cultural": "The college supports cultural, arts, and extracurricular activities through student associations.",
+
+            "nss": "The college has an active National Service Scheme (NSS) unit.",
+
+            "canteen": "The campus has one main canteen and two kiosks for food and refreshments.",
+
+            "wifi": "Wi-Fi facilities are available for students on campus.",
+
+            "library": "The Central Library contains academic books, journals, and digital resources. It is open from 8:00 AM to 6:00 PM on working days.",
+
+            "bus": "College buses operate across Ernakulam, Idukki, and Kottayam districts.",
+
+            "exam_results": "Internal marks can be checked through the ETLAB software. University results are published by KTU.",
+
+            "revaluation": "Revaluation and scrutiny procedures are supported as per university guidelines.",
+
+            "exam_help": "For exam-related issues, students should contact their tutors or assistant tutors.",
+
+            "parent_updates": "Parents are informed about student attendance and academic performance.",
+
+            "grievance": "Students can submit grievances to the Grievance Redressal Cell through official channels.",
+
+            "ragging": "The college follows a strict anti-ragging policy.",
+
             "contact": "Phone: 0485-2822363, 2822364. Email: office@vjcet.org / principal@vjcet.org. Website: www.vjcet.org",
-            "departments": "The college has departments for Civil Engineering (CE), Computer Science (CSE), Electronics (ECE), Electrical (EEE), Mechanical (ME), Information Technology (IT), Artificial Intelligence (AD), and Science & Humanities.",
-            "facilities": "Facilities include smart classrooms, advanced labs for all departments, a central computing facility, seminar halls, a cafeteria, a stationary store, and sports grounds.",
-            "ragging": "VJCET follows a strict anti-ragging policy. Any instances should be reported immediately to the Anti-Ragging Committee."
+
+            "auditiorium": "The college has an auditorium that is used for major events, programs, and gatherings.",
+
+            "seminar_halls": "The campus has more than four seminar halls used for workshops, talks, and department events.",
+
+            "medical_facility": "A medical room with first-aid facilities is available on campus for emergencies.",
+
+            "security": "Security personnel are available at the main gate and across the campus.",
+
+            "lifts": "Elevator (lift) facilities are not available in academic blocks.",
+
+            "labs_access": "Computer laboratories may be accessed beyond class hours with permission.",
+
+            "wifi_coverage": "Campus-wide Wi-Fi connectivity is available for students.",
+
+            "personal_laptops": "Personal laptops are not allowed inside computer labs.",
+
+            "printing": "Printing and xerox facilities are available only through reprography units.",
+
+            "sports_outdoor": "Outdoor sports facilities such as football and cricket are available on campus.",
+
+            "sports_indoor": "Indoor games facilities are available for students.",
+
+            "gym": "A gym and fitness center is available on campus.",
+
+            "sports_period": "Sports period is included as part of the academic schedule.",
+
+            "bus_missed": "If a student misses the college bus, there is no alternative transport facility provided by the college.",
+
+            "campus_exit": "Students are allowed to leave the campus during breaks only with proper permission.",
+
+            "gate_pass": "A gate pass system is followed for students leaving the campus during working hours.",
+
+            "women_cell": "A Women’s Cell / Internal Complaints Committee (ICC) is active in the college.",
+
+            "anti_ragging_contact": "An Anti-Ragging Committee is present to address and handle ragging-related complaints.",
+
+            "emergency_contact": "In case of emergencies or disciplinary issues, students should contact their tutors, assistant tutors, or Head of the Department (HOD).",
+
+            "campus_culture": "The overall campus environment is friendly and student-supportive.",
+
+            "fest_days": "Fest days may be conducted as full-day or half-day programs depending on the schedule.",
+
+            "student_events": "Students are allowed to organize events with proper approval from the college authorities.",
+
+            "reprography": "Reprography (xerox and printing) facilities are available in both B Block and C Block for students.",
+            
+            "college_office": "The college office is located in C Block.",
+
+            "principal_office": "The Principal’s office is located in C Block near the college office.",
+
+            "placement_office": "The Placement Cell office is located in C Block.",
+
+            "academic_section": "An academic/student affairs section is available to handle student-related matters.",
+
+            "stationery": "A stationery store is available on campus for student needs.",
+
+            "lab_lock_policy": "Department laboratories are usually locked outside class hours.",
+
+            "lab_access_projects": "Students are allowed to access labs for projects and practice with proper permission.",
+
+            "after_hours_lab": "Departments allow after-hours lab work with prior approval.",
+
+            "innovation_rooms": "There are no separate research or innovation rooms apart from regular department facilities.",
+
+            "dress_code_fine": "There is no fine imposed for dress code violations.",
+
+            "discipline_mobile": "If a student uses a mobile phone in class, it may be confiscated for one day and returned the next day.",
+
+            "discipline_process": "For disciplinary actions, students are required to submit an apology letter.",
+
+            "lateral_entry": "Lateral entry admissions are available.",
+
+            "orientation": "An orientation program is conducted for newly admitted students.",
+
+            "parent_orientation": "Parents are not required to attend the orientation program.",
+
+            "id_card": "Students are first issued a temporary ID card, followed by a permanent ID card later.",
+
+            "lab_exams": "Practical examinations are conducted both internally and externally.",
+
+            "lab_exam_strictness": "Laboratory examinations are conducted strictly.",
+
+            "lab_record": "Submission of lab records is mandatory for practical examinations.",
+
+            "drinking_water": "Drinking water facilities are available across the campus.",
+
+            "washrooms": "Washrooms are available in every block and on every floor.",
+
+            "charging_points": "Charging points are available for student use.",
+
+            "lost_and_found": "A lost-and-found system is followed on campus.",
+
+            "wheelchair_access": "Wheelchair accessibility information is not specified.",
+            
+            "periods_per_day": "There are 7 periods per day in the regular timetable.",
+
+            "period_duration": "Each period lasts approximately 50 to 55 minutes.",
+
+            "morning_prayer": "The college day begins with a morning prayer.",
+
+            "lunch_break": "Lunch break is from 12:45 PM to 1:35 PM.",
+
+            "bell_system": "College bells are strictly followed for all periods and breaks.",
+
+            "faculty_approach": "Students are allowed to approach teachers outside class hours for academic support.",
+
+            "faculty_nature": "Faculty members are generally supportive towards students.",
+
+            "extra_classes": "Extra classes are conducted, especially before exams when required.",
+
+            "online_classes": "Online classes may be conducted during emergencies or special situations.",
+
+            "assignments": "Assignments may be submitted in handwritten or printed format as instructed.",
+
+            "late_submission": "Late submission of assignments is generally not accepted.",
+
+            "internal_marks": "Late submission of assignments can negatively affect internal marks.",
+
+            "lab_records": "Lab records are evaluated strictly and must be submitted on time.",
+
+            "fest_classes": "Regular classes are usually suspended during technical and arts fests.",
+
+            "holiday_updates": "Holiday and academic updates are communicated through WhatsApp groups, notice boards, and the ETLAB portal.",
+
+            "compensatory_classes": "Compensatory classes may be conducted to cover missed syllabus.",
+
+            "hostel_mess_rules": "Hostel mess timings are strictly followed.",
+
+            "hostel_outside_food": "Outside food is generally not allowed inside hostels.",
+
+            "hostel_wifi": "Hostel Wi-Fi connectivity is generally good.",
+
+            "hostel_study_hours": "Study hours are enforced in hostels.",
+
+            "free_hours": "Students are allowed to sit anywhere on campus during free hours.",
+
+            "pda_policy": "Public display of affection (PDA) is not permitted on campus.",
+
+            "outsiders": "Outsiders or friends are not allowed inside the campus without permission.",
+
+            "photography": "Photography is allowed on campus, subject to college guidelines.",
+
+            "exam_reporting_time": "Students are advised to reach the examination hall at least 15 minutes before the exam starts.",
+
+            "hall_ticket": "Printed hall tickets are required for examinations.",
+
+            "exam_id_card": "Carrying a valid college ID card is mandatory during examinations.",
+
+            "exam_bags": "Bags are not allowed inside the examination hall.",
+
+            "exam_late_entry": "Late entry into the exam hall requires permission from the exam coordinator.",
+
+            "internal_weightage": "Internal assessment weightage depends on the batch and university regulations.",
+
+            "internal_marks_display": "Internal marks are published at the end of the semester.",
+
+            "internal_correction": "Students can request correction of internal marks if required.",
+
+            "internal_approval": "Internal marks are finalized and approved by class tutors.",
+
+            "mini_project": "Mini-projects are compulsory as part of the curriculum.",
+
+            "final_year_project": "Final-year projects may be done individually or as a team, depending on department guidelines.",
+
+            "external_guide": "Students are allowed to choose external project guides with permission.",
+
+            "project_reviews": "Project reviews are conducted periodically.",
+
+            "project_presentation": "Project presentations are conducted in a formal manner.",
+
+            "placement_cgpa": "A minimum CGPA of 6 is generally required to attend placement drives.",
+
+            "placement_optional": "Students may choose to skip placements if they wish.",
+
+            "placement_attendance": "Attendance is compulsory for placement training sessions.",
+
+            "placement_arrears": "Companies generally prefer candidates with no history of backlogs.",
+
+            "placement_binding": "Placement offers are considered binding once accepted.",
+
+            "fee_payment": "Fees can be paid both online and directly at the college office.",
+
+            "late_fee": "Late fee payment may attract fines as per college rules.",
+
+            "exam_fee": "Examination fees are separate from tuition fees.",
+
+            "fee_refund": "Fees are generally non-refundable if a student leaves mid-year.",
+
+            "issue_escalation_1": "Students should first approach their tutor or Head of the Department (HOD) for academic issues.",
+
+            "issue_escalation_2": "If unresolved, the issue can be escalated to higher authorities.",
+
+            "final_authority": "The Vice Principal or Principal is the final authority in serious matters.",
+
+            "alumni": "The college has an active alumni association.",
+
+            "alumni_support": "Alumni assist students with placements and internship opportunities.",
+
+            "certificates": "Experience and conduct certificates are issued after graduation.",
+
+            "certificate_timeline": "Certificates are issued after graduation following the college process.",
+
+            "exam_calculator": "Scientific calculators are allowed in examinations as per subject requirements.",
+
+            "exam_smart_devices": "Smart watches and smart bands are not allowed inside examination halls.",
+
+            "exam_malpractice": "If malpractice is suspected, the case is reviewed and appropriate action is taken by the authorities.",
+
+            "exam_rough_sheets": "Rough sheets are not provided during examinations.",
+
+            "exam_exit": "Students are allowed to leave the examination hall only after the minimum time limit is completed.",
+
+            "attendance_type": "Attendance is calculated subject-wise.",
+
+            "attendance_proxy": "Proxy attendance cases are taken seriously and strict action is initiated.",
+
+            "attendance_extra_classes": "Attendance may be improved through extra classes when permitted.",
+
+            "attendance_freeze": "Attendance is frozen before examinations as per academic rules.",
+
+            "lab_exam_uniform": "Uniform is mandatory during lab examinations.",
+
+            "lab_coat": "Lab coats are not mandatory unless specified by the department.",
+
+            "lab_exam_miss": "If a student misses a lab exam, they should contact the tutor or the concerned faculty member.",
+
+            "lab_viva": "Viva voce examinations are conducted strictly.",
+
+            "lab_repeat": "Students may be allowed to redo experiments for improvement if permitted.",
+
+            "placement_dress": "Formal dress is mandatory during placement drives.",
+
+            "placement_multiple": "Students are allowed to attend multiple company placement drives.",
+
+            "placement_reject": "Rejecting a placement offer does not result in immediate action.",
+
+            "placement_mode": "Placement drives may be conducted in online, offline, or hybrid mode.",
+
+            "hostel_rules": "Hostellers generally have stricter rules compared to day scholars.",
+
+            "day_scholar_timing": "Day scholars are allowed to stay on campus until 6:00 PM.",
+
+            "hostel_weekend": "Hostellers are allowed to go home on weekends with permission.",
+
+            "hostel_parent_info": "Parents are informed regarding hostel-related issues.",
+
+            "power_backup": "The campus has power backup facilities such as generators.",
+
+            "internet_outage": "During internet outages, services resume once connectivity is restored.",
+
+            "evacuation_drill": "Emergency evacuation drills are conducted on campus.",
+
+            "bunking": "Bunking classes is generally discouraged but may occur.",
+
+            "surprise_tests": "Surprise tests may be conducted by faculty.",
+
+            "faculty_punctuality": "Faculty members are generally punctual.",
+
+            "ragging_status": "The campus maintains a zero-tolerance policy towards ragging.",
+
+            "senior_support": "Senior students are generally helpful and supportive towards juniors."
         };
+
 
         // --- AUTH & NAVIGATION ---
         onAuthStateChanged(auth, (user) => {
-            if (user) {
+            currentUser = user;
+            // Only proceed if disclaimer is already accepted
+            if (isDisclaimerAccepted) {
+                navigateBasedOnAuth();
+            }
+        });
+
+        // Expose function to window for the button click
+        window.acceptDisclaimer = function() {
+            isDisclaimerAccepted = true;
+            document.getElementById('disclaimer-view').style.display = 'none';
+            document.getElementById('main-card').classList.remove('disclaimer-active');
+            navigateBasedOnAuth();
+        };
+
+        function navigateBasedOnAuth() {
+            if (currentUser) {
                 showView('chat-view', 'chat-active');
                 
                 // Update Header
@@ -607,20 +1013,22 @@
                 if(headerTitle) {
                     headerTitle.innerHTML = `<span class="status-dot"></span> ${greeting}, ${name}`;
                 }
-
             } else {
                 showView('auth-view', 'auth-active');
                 resetAuthUI();
             }
-        });
+        }
 
         function showView(viewId, cardClass) {
             const card = document.getElementById('main-card');
             const authView = document.getElementById('auth-view');
             const chatView = document.getElementById('chat-view');
+            const disclaimerView = document.getElementById('disclaimer-view');
 
+            // Hide everything first
             authView.style.display = 'none';
             chatView.style.display = 'none';
+            disclaimerView.style.display = 'none';
 
             card.className = `glass-card ${cardClass}`;
             document.getElementById(viewId).style.display = 'flex';
@@ -842,27 +1250,28 @@
         }
 
         async function callGemini(query) {
-            // RETRIEVE CONTEXT FROM KNOWLEDGE BASE
-            let retrievedContext = "";
-            const lowerQuery = query.toLowerCase();
-            for (const [key, value] of Object.entries(collegeKnowledgeBase)) {
-                if (lowerQuery.includes(key)) {
-                    retrievedContext += `- ${value}\n`;
-                }
+            const userEmail = sessionStorage.getItem('userEmail');
+            let contextData = Object.values(collegeKnowledgeBase).join("\n- ");
+            
+            // Check specific user
+            if (userEmail && userEmail.toLowerCase() === 'abhinav24rg307@vjcet.org') {
+                 contextData += `\n\n--- SPECIFIC STUDENT DATA FOR ${userEmail} ---\n` + JSON.stringify(specificStudentData, null, 2);
             }
+
+            const system = `You are AskCampus, the official AI assistant for Viswajyothi College of Engineering and Technology (VJCET).
             
-            const system = `You are AskCampus, a helpful assistant for VJCET. 
+            OFFICIAL CAMPUS INFORMATION:
+            - ${contextData}
             
-            RELEVANT CAMPUS INFORMATION:
-            ${retrievedContext}
-            
-            RULES:
-            1. Use the RELEVANT INFORMATION above to answer if applicable.
-            2. Answer concisely and professionally. 
-            3. If the user asks about specific details not in the info provided, suggest contacting the office.
-            4. Do not give medical/legal advice.`;
+            INSTRUCTIONS:
+            1. Answer the user's question strictly based on the OFFICIAL CAMPUS INFORMATION provided above.
+            2. Keep your response SHORT, concise, and to the point.
+            3. If the answer is not found in the provided information, simply state that you do not have that specific detail and suggest contacting the college office.
+            4. Do not hallucinate or make up information.
+            5. Do not simply list keywords; provide natural, human-like answers.`;
             
             try {
+                // UPDATED: Using gemini-2.5-flash-preview-09-2025
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
