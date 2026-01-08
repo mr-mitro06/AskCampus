@@ -538,7 +538,7 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const apiKey = ""; // Gemini API Key
+        const apiKey = "AIzaSyCMxeWj6jsXAAqnJOXXMGV7HT-v7dw28Us"; // Gemini API Key
 
         try { emailjs.init(emailJsConfig.publicKey); } catch(e) { console.log("EmailJS init failed"); }
 
@@ -573,9 +573,9 @@
             return "Good Evening";
         }
 
-        // --- TRAINING DATA (KNOWLEDGE BASE) ---
+        // --- KNOWLEDGE BASE (Updated & Injected) ---
         const collegeKnowledgeBase = {
-            "about": "Viswajyothi College of Engineering and Technology (VJCET) is a self-financing engineering college established in 2001. It is managed by the Diocesan Technical Education Trust, Kothamangalam. The campus is located in Vazhakulam, Muvattupuzha.",
+            "about": "Viswajyothi College of Engineering and Technology (VJCET) is a self-financing engineering college established in 2001, managed by the Diocesan Technical Education Trust, Kothamangalam. The campus is located in Vazhakulam, Muvattupuzha.",
             "location": "VJCET is situated in Vazhakulam, Muvattupuzha, Ernakulam District, Kerala, India. It is often referred to as 'Pineapple City' due to the region's produce.",
             "affiliation": "The college is affiliated to APJ Abdul Kalam Technological University (KTU) and approved by AICTE, New Delhi. It is accredited by NAAC with 'A' Grade.",
             "courses": "VJCET offers B.Tech in CSE, ECE, EEE, ME, CE, IT, AI & DS (AD), and CSE (Cyber Security). It also offers M.Tech degrees and an MBA program.",
@@ -588,7 +588,10 @@
             "principal": "The Principal manages the academic and administrative affairs. For appointments, contact the college office.",
             "grievance": "Grievances can be addressed to the Grievance Redressal Cell via this portal or physically dropped in suggestion boxes located in the main block.",
             "events": "VJCET hosts 'BODHI' (National Level Tech Fest) and 'DRISHITI' (Arts Fest) annually. Department associations also conduct various technical events.",
-            "contact": "Phone: 0485-2822363, 2822364. Email: office@vjcet.org / principal@vjcet.org. Website: www.vjcet.org"
+            "contact": "Phone: 0485-2822363, 2822364. Email: office@vjcet.org / principal@vjcet.org. Website: www.vjcet.org",
+            "departments": "The college has departments for Civil Engineering (CE), Computer Science (CSE), Electronics (ECE), Electrical (EEE), Mechanical (ME), Information Technology (IT), Artificial Intelligence (AD), and Science & Humanities.",
+            "facilities": "Facilities include smart classrooms, advanced labs for all departments, a central computing facility, seminar halls, a cafeteria, a stationary store, and sports grounds.",
+            "ragging": "VJCET follows a strict anti-ragging policy. Any instances should be reported immediately to the Anti-Ragging Committee."
         };
 
         // --- AUTH & NAVIGATION ---
@@ -807,7 +810,6 @@
             const issue = document.getElementById('report-text').value.trim();
             if(!issue) return;
             
-            // Here you would send this to Firestore/Email
             alert("Thank you! Your feedback has been recorded.");
             document.getElementById('report-text').value = "";
             closeReportModal();
@@ -840,47 +842,25 @@
         }
 
         async function callGemini(query) {
-            // 1. SEARCH KNOWLEDGE BASE (Local Logic)
-            let localAnswer = null;
+            // RETRIEVE CONTEXT FROM KNOWLEDGE BASE
+            let retrievedContext = "";
             const lowerQuery = query.toLowerCase();
-            
-            // Simple keyword matching for local fallback or RAG context
-            let contextData = "";
             for (const [key, value] of Object.entries(collegeKnowledgeBase)) {
-                if (lowerQuery.includes(key) || value.toLowerCase().includes(lowerQuery)) {
-                    contextData += value + "\n";
-                    if(!localAnswer) localAnswer = value; // Pick first match for local mode
+                if (lowerQuery.includes(key)) {
+                    retrievedContext += `- ${value}\n`;
                 }
             }
-
-            // 2. IF NO API KEY, USE LOCAL FALLBACK (Offline AI)
-            if (!apiKey) {
-                console.warn("No API Key: Using offline knowledge base.");
-                
-                if (localAnswer) {
-                    // Simulate "thinking" delay slightly for realism
-                    return localAnswer; 
-                }
-                
-                // Smart Fallback if no keyword matched
-                if (lowerQuery.includes("hello") || lowerQuery.includes("hi")) {
-                    return "Hello! I am the VJCET Campus Assistant. Ask me about fees, exams, hostels, or buses.";
-                }
-                
-                return "I am currently in offline mode. I can answer questions about: " + Object.keys(collegeKnowledgeBase).join(", ") + ". For advanced AI chat, please add a Gemini API Key.";
-            }
-
-            // 3. REAL AI CALL (If API Key exists)
-            const system = `You are AskCampus, the official AI assistant for Viswajyothi College of Engineering and Technology (VJCET).
             
-            OFFICIAL CAMPUS DATA:
-            ${contextData}
+            const system = `You are AskCampus, a helpful assistant for VJCET. 
             
-            INSTRUCTIONS:
-            - If the user's query relates to the DATA provided above, use it to answer accurately.
-            - If the query is general (like "how are you"), be polite and helpful.
-            - If the query is about specific details NOT in the data, politely say you don't have that info and suggest contacting the office.
-            - Keep answers short, professional, and friendly.`;
+            RELEVANT CAMPUS INFORMATION:
+            ${retrievedContext}
+            
+            RULES:
+            1. Use the RELEVANT INFORMATION above to answer if applicable.
+            2. Answer concisely and professionally. 
+            3. If the user asks about specific details not in the info provided, suggest contacting the office.
+            4. Do not give medical/legal advice.`;
             
             try {
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
@@ -889,10 +869,8 @@
                     body: JSON.stringify({ contents: [{parts:[{text: query}]}], systemInstruction: {parts:[{text: system}]} })
                 });
                 const data = await res.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm having trouble thinking right now.";
-            } catch (e) { 
-                return "Connection error. Please check your internet."; 
-            }
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "I didn't quite get that.";
+            } catch (e) { return "I'm having trouble connecting right now."; }
         }
     </script>
 </body>
